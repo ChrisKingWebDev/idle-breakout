@@ -65,13 +65,17 @@ const create = () => {
 
     paddle = game.add.sprite(game.world.centerX, 500, 'breakout', 'paddle_big.png');
     paddle.anchor.setTo(0.5, 0.5);
+    // paddle.scale.x = 3;
+    // paddle.scale.y = 8;
     game.physics.enable(paddle, Phaser.Physics.ARCADE);
+    paddle.body.setSize(48,200);
     paddle.body.collideWorldBounds = false;
     paddle.body.bounce.set(1);
     paddle.body.immovable = true;
     paddle.velX = () => {
          return paddle.body.velocity.x;
-     };
+    };
+    paddle.currentVelocity = 0;
 
     ball = game.add.sprite(game.world.centerX, paddle.y - 16, 'breakout', 'ball_1.png');
     ball.anchor.set(0.5);
@@ -84,6 +88,8 @@ const create = () => {
     ball.velX = () => {
          return ball.body.velocity.x
      };
+     ball.needsRotation = false;
+     ball.needsVelocity = false;
 
     ball.animations.add('spin', [ 'ball_1.png', 'ball_2.png', 'ball_3.png', 'ball_4.png', 'ball_5.png' ], 50, true, false);
 
@@ -135,103 +141,89 @@ const ballDistanceRight = () => {
 
 const update = () => {
     if (!ballOnPaddle) {
-        // let destination = ball.x;
+
+        let ballXDistance = ball.x - ball.lastX;
+        // if(ballGoingLeft()) {
+        //     paddle.x = ball.x + ballXDistance - 15;
+        // } else if (ballGoingRight()) {
+        //     paddle.x = ball.x + ballXDistance + 15;
+        // }
+        let destination = ball.x;
         // if the ball is over the paddle, don't do anything, maybe add deceleration.
-        let ballFrameDistance = ball.velX() / 1000 * game.time.elapsedMS;
         if (paddleUnderBall()) {
-            // paddle.body.velocity.x = ball.body.velocity.y
-            if(ballGoingLeft() && paddle.velX() < ball.velX()) {
-                // paddle has caught up to the ball but is now going too fast
-                // let valDiff = ball.velX() - paddle.velX();
-                // let change = valDiff < paddleDeceleration ? valDiff : paddleDeceleration;
-                // paddle.body.velocity.x = paddle.body.velocity.x + change;
-                paddle.body.velocity.x = paddle.body.velocity.x + paddleDeceleration;
-                if (paddle.velX() > ball.velX()) {
-                    paddle.body.velocity.x = ball.velX()
-                }
-            } else if (ballGoingRight() && paddle.velX() > ball.velX()) {
-                // paddle has caught up to the ball but is now going too fast
-                // let valDiff = paddle.body.velocity.x - ball.body.velocity.x;
-                // let change = valDiff < paddleDeceleration ? valDiff : paddleDeceleration;
-                // paddle.body.velocity.x = paddle.body.velocity.x - change;
-                paddle.body.velocity.x = paddle.body.velocity.x - paddleDeceleration;
-                if (paddle.velX() < ball.velX()) {
-                    paddle.body.velocity.x = ball.velX()
-                }
-            }
+
+            // if(ballGoingLeft() && paddle.velX() < ball.velX()) {
+            //     // paddle has caught up to the ball but is now going too fast
+            //     // let valDiff = ball.velX() - paddle.velX();
+            //     // let change = valDiff < paddleDeceleration ? valDiff : paddleDeceleration;
+            //     // paddle.body.velocity.x = paddle.body.velocity.x + change;
+            //     paddle.body.velocity.x = paddle.body.velocity.x + paddleDeceleration;
+            //     if (paddle.velX() > ball.velX()) {
+            //         paddle.body.velocity.x = ball.velX()
+            //     }
+            // } else if (ballGoingRight() && paddle.velX() > ball.velX()) {
+            //     // paddle has caught up to the ball but is now going too fast
+            //     // let valDiff = paddle.body.velocity.x - ball.body.velocity.x;
+            //     // let change = valDiff < paddleDeceleration ? valDiff : paddleDeceleration;
+            //     // paddle.body.velocity.x = paddle.body.velocity.x - change;
+            //     paddle.body.velocity.x = paddle.body.velocity.x - paddleDeceleration;
+            //     if (paddle.velX() < ball.velX()) {
+            //         paddle.body.velocity.x = ball.velX()
+            //     }
+            // }
+            paddle.x = paddle.x + paddle.currentVelocity
         } else if (ballLeftOfPaddle()) {
             // paddle is to the right of the ball
-            // distance = paddle.left = destination;
-            // if (distance > maxPaddleSpeed) {
-            //     distance = maxPaddleSpeed;
-            // }
-            // paddle.x = paddle.x - distance;
             if (paddleGoingRight()) {
                 // going the wrong way
                 // if (paddle.body.velocity.x < paddleDeceleration) {
-                    paddle.body.velocity.x = paddle.body.velocity.x - paddleDeceleration;
-                    if (paddle.body.velocity.x < 0) {
-                        paddle.body.velocity.x = 0;
-                    }
+                paddle.currentVelocity = paddle.currentVelocity - paddleDeceleration
+                if (paddle.currentVelocity < ballXDistance) {
+                    paddle.currentVelocity = ballXDistance;
+                }
+                paddle.x = paddle.x + paddle.currentVelocity;
                 // } else {
                 //     paddle.body.velocity.x = 0;
                 // }
-            } else if (paddle.body.velocity.x > (maxPaddleSpeed * -1)) {
+            } else if (paddle.currentVelocity > (maxPaddleSpeed * -1)) {
                 // need to check is the new velocity is going to put the paddle too far past the ball
                 // used in cases of a very high acceleration
                 let acceleration = paddleAcceleration;
-                // if (paddleAcceleration < Math.abs(ball.body.velocity.x)) {
-                    paddle.body.velocity.x = paddle.body.velocity.x - paddleAcceleration;
-                // } else {
-                    if (paddle.body.velocity.x < maxPaddleSpeed * -1) {
-                        paddle.body.velocity.x = maxPaddleSpeed
-                    }
-                    //don't accelerate much past the speed of the ball
-                    let paddleWillMove = paddle.body.velocity.x / 1000 * game.time.elapsedMS
-                    if(paddleWillMove < ballDistanceLeft() + ballFrameDistance) {
-                        paddle.body.x += ballDistanceLeft() + ballFrameDistance - 8;
-                        paddle.body.velocity.x = ball.body.velocity.x * 1.2
-                    }
+                paddle.currentVelocity = paddle.currentVelocity - paddleAcceleration;
+                if (paddle.currentVelocity < maxPaddleSpeed * -1) {
+                    paddle.currentVelocity = maxPaddleSpeed
+                }
+                //don't accelerate much past the speed of the ball
+                if(paddle.currentVelocity < ballDistanceLeft() + ballXDistance) {
+                    paddle.currentVelocity = ballDistanceLeft() + (ballXDistance * 1.2);
+                }
+                paddle.x = paddle.x + paddle.currentVelocity;
 
                 // }
             }
         } else if (ballRightOfPaddle()) {
             // paddle is to the left of the ball
-            // distance = destination - paddle.right;
-            // if (distance > maxPaddleSpeed) {
-            //     distance = maxPaddleSpeed;
-            // }
-            // paddle.x = paddle.x + distance;
             if (paddleGoingLeft()) {
                 // going the wrong way
+                paddle.currentVelocity = paddle.currentVelocity + paddleDeceleration
+                if (paddle.currentVelocity > ballXDistance) {
+                    paddle.currentVelocity = ballXDistance;
+                }
+                paddle.x = paddle.x + paddle.currentVelocity;
 
-                // if (paddle.body.velocity.x < paddleDeceleration) {
-                    paddle.body.velocity.x = paddle.body.velocity.x + paddleDeceleration;
-                    if (paddle.body.velocity.x > 0) {
-                        paddle.body.velocity.x = 0;
-                    }
-                // } else {
-                //     paddle.body.velocity.x = 0;
-                // }
-            } else if (paddle.body.velocity.x < maxPaddleSpeed) {
+            } else if (paddle.currentVelocity < maxPaddleSpeed) {
                 // need to check is the new velocity is going to put the paddle too far past the ball
                 // used in cases of a very high acceleration
                 let acceleration = paddleAcceleration;
-                // if (paddleAcceleration < Math.abs(ball.body.velocity.x)) {
-                    paddle.body.velocity.x = paddle.body.velocity.x + paddleAcceleration;
-
-                    if (paddle.body.velocity.x > maxPaddleSpeed) {
-                        paddle.body.velocity.x = maxPaddleSpeed
-                    }
-                    let paddleWillMove = paddle.body.velocity.x / 1000 * game.time.elapsedMS
-                    if(paddleWillMove > ballDistanceRight() + ballFrameDistance) {
-                        paddle.body.x += ballDistanceRight() + ballFrameDistance + 8;
-                        paddle.body.velocity.x = ball.body.velocity.x * 1.2
-                    }
-                // } else {
-                    //don't accelerate past the speed of the ball
-                    // paddle.body.velocity.x = ball.body.velocity.x * 1.2
-                // }
+                paddle.currentVelocity = paddle.currentVelocity + paddleAcceleration;
+                if (paddle.currentVelocity > maxPaddleSpeed) {
+                    paddle.currentVelocity = maxPaddleSpeed
+                }
+                //don't accelerate much past the speed of the ball
+                if(paddle.currentVelocity > ballDistanceLeft() + ballXDistance) {
+                    paddle.currentVelocity = ballDistanceLeft() + (ballXDistance * 1.2);
+                }
+                paddle.x = paddle.x + paddle.currentVelocity;
 
             }
 
@@ -277,17 +269,29 @@ const update = () => {
         paddle.body.velocity.x = 0;
     }
 
-
+    ball.lastX = ball.x;
 
     if (ball.needsVelocity) {
         ballVelocity = ballVelocity * ballRebound;
+
         game.physics.arcade.velocityFromRotation(ball.body.angle, ballVelocity, ball.body.velocity);
         ball.needsVelocity = false;
     }
 
+    if (ball.needsRotation !== false) {
+
+        var diff = ball.needsRotation
+        if (Math.floor(Math.abs(diff)) < 3) {
+            diff = getRandomInt(-20,20);
+        }
+        game.physics.arcade.velocityFromRotation(ball.body.angle + (diff / 1000), ballVelocity, ball.body.velocity);
+        ball.needsRotation = false;
+    }
+
     if (ballOnPaddle)
     {
-        ball.body.x = paddle.x;
+        ball.x = paddle.x;
+        ball.lastX = paddle.x;
     }
     else
     {
@@ -307,7 +311,11 @@ const releaseBall = () => {
     if (ballOnPaddle)
     {
         ballOnPaddle = false;
-        game.physics.arcade.velocityFromAngle(getRandomInt(-135,-45), ballVelocity, ball.body.velocity);
+        randomAngle = getRandomInt(-135,-105);
+        // if(getRandomInt(0,1) === 1) {
+        //     randomAngle = getRandomInt(-15,-45)
+        // }
+        game.physics.arcade.velocityFromAngle(randomAngle, ballVelocity, ball.body.velocity);
         ball.animations.play('spin');
         introText.visible = false;
     }
@@ -359,26 +367,8 @@ const ballHitBrick = (_ball, _brick) => {
 
 const ballHitPaddle = (_ball, _paddle) => {
 
-    var diff = 0;
-    if (_ball.x < _paddle.x)
-    {
-        //  Ball is on the left-hand side of the paddle
-        diff = _paddle.x - _ball.x;
-        _ball.body.velocity.x = (-20 * diff);
-    }
-    else if (_ball.x > _paddle.x)
-    {
-        //  Ball is on the right-hand side of the paddle
-        diff = _ball.x -_paddle.x;
-        _ball.body.velocity.x = (20 * diff);
-    }
-    else
-    {
-        //  Ball is perfectly in the middle
-        //  Add a little random X to stop it bouncing straight up!
-        _ball.body.velocity.x = 2 + Math.random() * 100;
-    }
-
+    var diff = _ball.x - _paddle.x;
+    ball.needsRotation = diff;
 }
 
 const resetLevel = () => {
@@ -390,7 +380,11 @@ const resetLevel = () => {
     ball.y =  paddle.y - 16;
 
     ballVelocity = ballInitialVelocity;
-    game.physics.arcade.velocityFromAngle(getRandomInt(-135,-45), ballVelocity, ball.body.velocity);
+    randomAngle = getRandomInt(-135,-105);
+    if(getRandomInt(0,1) === 1) {
+        randomAngle = getRandomInt(-15,-45)
+    }
+    game.physics.arcade.velocityFromAngle(randomAngle, ballVelocity, ball.body.velocity);
 
     //  And bring the bricks back from the dead :)
     bricks.callAll('revive');
@@ -400,6 +394,11 @@ const getRandomInt = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+const render = () => {
+    // game.debug.body(ball);
+    // game.debug.body(paddle);
+}
+
 var game = new Phaser.Game(800, 600, Phaser.AUTO, 'game-container', {
-  preload: preload, create: create, update: update
+  preload: preload, create: create, update: update, render: render
 });
