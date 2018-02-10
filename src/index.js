@@ -26,14 +26,18 @@ var score = 0;
 
 var ballInitialVelocity = 500;
 var ballVelocity = ballInitialVelocity;
-var ballRebound = 1.05;
 
-// var maxPaddleSpeed = 300;
-// var paddleAcceleration = 40;
-// var paddleDeceleration = 100;
-var maxPaddleSpeed = 30000;
-var paddleAcceleration = 5000;
-var paddleDeceleration = 5000;
+//normal ball and paddle
+var ballRebound = 1.001;
+var maxPaddleSpeed = 300;
+var paddleAcceleration = 40;
+var paddleDeceleration = 100;
+
+// very fast ball and ball
+// var ballRebound = 1.05;
+// var maxPaddleSpeed = 30000;
+// var paddleAcceleration = 5000;
+// var paddleDeceleration = 5000;
 
 var scoreText;
 var introText;
@@ -72,9 +76,6 @@ const create = () => {
     paddle.body.collideWorldBounds = false;
     paddle.body.bounce.set(1);
     paddle.body.immovable = true;
-    paddle.velX = () => {
-         return paddle.body.velocity.x;
-    };
     paddle.currentVelocity = 0;
 
     ball = game.add.sprite(game.world.centerX, paddle.y - 16, 'breakout', 'ball_1.png');
@@ -86,7 +87,7 @@ const create = () => {
     // ball.body.maxVelocity.x = 1000;
     // ball.body.maxVelocity.y = 1000;
     ball.velX = () => {
-         return ball.body.velocity.x
+         return ball.x - ball.lastX;
      };
      ball.needsRotation = false;
      ball.needsVelocity = false;
@@ -111,15 +112,15 @@ const ballLeftOfPaddle = () => {
 }
 
 const ballRightOfPaddle = () => {
-    return ball.x > paddle.left
+    return ball.x > paddle.right
 }
 
 const paddleGoingLeft = () => {
-    return paddle.body.velocity.x < 0;
+    return paddle.currentVelocity < 0;
 }
 
 const paddleGoingRight = () => {
-    return paddle.body.velocity.x > 0;
+    return paddle.currentVelocity > 0;
 }
 
 const ballGoingLeft = () => {
@@ -130,104 +131,133 @@ const ballGoingRight = () => {
     return ball.body.velocity.x > 0;
 }
 
-const ballDistanceLeft = () => {
+const ballDistance = () => {
     // returning a negative number on purpose
-    return ball.x - paddle.left;
-}
-
-const ballDistanceRight = () => {
-    return ball.x - paddle.right;
+    return ball.x - paddle.x;
 }
 
 const update = () => {
     if (!ballOnPaddle) {
 
-        let ballXDistance = ball.x - ball.lastX;
+        if (ballGoingRight()) {
+                //paddle is going slower than ball, speed up
+                if (paddle.currentVelocity < ball.velX() && ballDistanceRight() > 0) {
+                    paddle.currentVelocity = paddle.currentVelocity + paddleAcceleration;
+                    if (paddle.currentVelocity > maxPaddleSpeed) {
+                        // going faster than it can
+                        paddle.currentVelocity = maxPaddleSpeed;
+                    }
+                    let desiredDistance = ballDistanceRight() + ball.velX();
+                    if (paddle.currentVelocity > desiredDistance) {
+                        //going faster than the paddle now
+                        paddle.currentVelocity = desiredDistance;
+                    }
+                } else if (paddle.currentVelocity > ball.velX() && ballDistanceRight() < 0) {
+                    // paddle is going too fast and has passed the ball, or the ball switched direction
+                    let desiredVelocity = ball.velX() + ballDistanceRight
+
+                }
+                else if (ballDistanceRight() < 5 || ballDistanceRight() > 5) {
+                    //paddle is right under the ball, good stuff
+                    paddle.currentVelocity = ball.velX();
+                }
+        } else if (ballGoingLeft()) {
+            if (paddle.currentVelocity > ball.velX() && ballDistanceLeft() < 0) {
+                paddle.currentVelocity = paddle.currentVelocity - paddleAcceleration;
+                if (paddle.currentVelocity < (maxPaddleSpeed * -1)) {
+                    // going faster than it can
+                    paddle.currentVelocity = (maxPaddleSpeed * -1);
+                }
+                let desiredDistance = ballDistanceLeft() + ball.velX();
+                if (paddle.currentVelocity < desiredDistance) {
+                    //going faster than the paddle now
+                    paddle.currentVelocity = desiredDistance;
+                }
+            } else if (ballDistanceLeft() < 5 || ballDistanceLeft() > 5) {
+                paddle.currentVelocity = ball.velX();
+            }
+        }
+        paddle.x = paddle.x + paddle.currentVelocity;
+
         // if(ballGoingLeft()) {
         //     paddle.x = ball.x + ballXDistance - 15;
         // } else if (ballGoingRight()) {
         //     paddle.x = ball.x + ballXDistance + 15;
         // }
-        let destination = ball.x;
-        // if the ball is over the paddle, don't do anything, maybe add deceleration.
-        if (paddleUnderBall()) {
-
-            // if(ballGoingLeft() && paddle.velX() < ball.velX()) {
-            //     // paddle has caught up to the ball but is now going too fast
-            //     // let valDiff = ball.velX() - paddle.velX();
-            //     // let change = valDiff < paddleDeceleration ? valDiff : paddleDeceleration;
-            //     // paddle.body.velocity.x = paddle.body.velocity.x + change;
-            //     paddle.body.velocity.x = paddle.body.velocity.x + paddleDeceleration;
-            //     if (paddle.velX() > ball.velX()) {
-            //         paddle.body.velocity.x = ball.velX()
-            //     }
-            // } else if (ballGoingRight() && paddle.velX() > ball.velX()) {
-            //     // paddle has caught up to the ball but is now going too fast
-            //     // let valDiff = paddle.body.velocity.x - ball.body.velocity.x;
-            //     // let change = valDiff < paddleDeceleration ? valDiff : paddleDeceleration;
-            //     // paddle.body.velocity.x = paddle.body.velocity.x - change;
-            //     paddle.body.velocity.x = paddle.body.velocity.x - paddleDeceleration;
-            //     if (paddle.velX() < ball.velX()) {
-            //         paddle.body.velocity.x = ball.velX()
-            //     }
-            // }
-            paddle.x = paddle.x + paddle.currentVelocity
-        } else if (ballLeftOfPaddle()) {
-            // paddle is to the right of the ball
-            if (paddleGoingRight()) {
-                // going the wrong way
-                // if (paddle.body.velocity.x < paddleDeceleration) {
-                paddle.currentVelocity = paddle.currentVelocity - paddleDeceleration
-                if (paddle.currentVelocity < ballXDistance) {
-                    paddle.currentVelocity = ballXDistance;
-                }
-                paddle.x = paddle.x + paddle.currentVelocity;
-                // } else {
-                //     paddle.body.velocity.x = 0;
-                // }
-            } else if (paddle.currentVelocity > (maxPaddleSpeed * -1)) {
-                // need to check is the new velocity is going to put the paddle too far past the ball
-                // used in cases of a very high acceleration
-                let acceleration = paddleAcceleration;
-                paddle.currentVelocity = paddle.currentVelocity - paddleAcceleration;
-                if (paddle.currentVelocity < maxPaddleSpeed * -1) {
-                    paddle.currentVelocity = maxPaddleSpeed
-                }
-                //don't accelerate much past the speed of the ball
-                if(paddle.currentVelocity < ballDistanceLeft() + ballXDistance) {
-                    paddle.currentVelocity = ballDistanceLeft() + (ballXDistance * 1.2);
-                }
-                paddle.x = paddle.x + paddle.currentVelocity;
-
-                // }
-            }
-        } else if (ballRightOfPaddle()) {
-            // paddle is to the left of the ball
-            if (paddleGoingLeft()) {
-                // going the wrong way
-                paddle.currentVelocity = paddle.currentVelocity + paddleDeceleration
-                if (paddle.currentVelocity > ballXDistance) {
-                    paddle.currentVelocity = ballXDistance;
-                }
-                paddle.x = paddle.x + paddle.currentVelocity;
-
-            } else if (paddle.currentVelocity < maxPaddleSpeed) {
-                // need to check is the new velocity is going to put the paddle too far past the ball
-                // used in cases of a very high acceleration
-                let acceleration = paddleAcceleration;
-                paddle.currentVelocity = paddle.currentVelocity + paddleAcceleration;
-                if (paddle.currentVelocity > maxPaddleSpeed) {
-                    paddle.currentVelocity = maxPaddleSpeed
-                }
-                //don't accelerate much past the speed of the ball
-                if(paddle.currentVelocity > ballDistanceLeft() + ballXDistance) {
-                    paddle.currentVelocity = ballDistanceLeft() + (ballXDistance * 1.2);
-                }
-                paddle.x = paddle.x + paddle.currentVelocity;
-
-            }
-
-        }
+        // let destination = ball.x;
+        // // if the ball is over the paddle, don't do anything, maybe add deceleration.
+        // if (paddleUnderBall()) {
+        //
+        //     if(ballGoingLeft() && paddle.velX() < ball.velX()) {
+        //         // paddle has caught up to the ball but is now going too fast
+        //         paddle.currentVelocity = paddle.currentVelocity + paddleDeceleration;
+        //         if (paddle.velX() > ball.velX()) {
+        //             paddle.currentVelocity = ball.velX()
+        //         }
+        //     } else if (ballGoingRight() && paddle.velX() > ball.velX()) {
+        //         // paddle has caught up to the ball but is now going too fast
+        //         paddle.currentVelocity = paddle.currentVelocity - paddleDeceleration;
+        //         if (paddle.velX() < ball.velX()) {
+        //             paddle.currentVelocity = ball.velX()
+        //         }
+        //     }
+        //     paddle.x = paddle.x + paddle.currentVelocity
+        // } else if (ballLeftOfPaddle()) {
+        //     // paddle is to the right of the ball
+        //     if (paddleGoingRight()) {
+        //         // going the wrong way
+        //         // if (paddle.body.velocity.x < paddleDeceleration) {
+        //         paddle.currentVelocity = paddle.currentVelocity - paddleDeceleration
+        //         if (paddle.currentVelocity < ballXDistance) {
+        //             paddle.currentVelocity = ballXDistance;
+        //         }
+        //         paddle.x = paddle.x + paddle.currentVelocity;
+        //         // } else {
+        //         //     paddle.body.velocity.x = 0;
+        //         // }
+        //     } else if (paddle.currentVelocity > (maxPaddleSpeed * -1)) {
+        //         // need to check is the new velocity is going to put the paddle too far past the ball
+        //         // used in cases of a very high acceleration
+        //         let acceleration = paddleAcceleration;
+        //         paddle.currentVelocity = paddle.currentVelocity - paddleAcceleration;
+        //         if (paddle.currentVelocity < maxPaddleSpeed * -1) {
+        //             paddle.currentVelocity = maxPaddleSpeed
+        //         }
+        //         //don't accelerate much past the speed of the ball
+        //         if(paddle.currentVelocity < ballDistanceLeft() + ballXDistance) {
+        //             paddle.currentVelocity = ballDistanceLeft() + ballXDistance;
+        //         }
+        //         paddle.x = paddle.x + paddle.currentVelocity;
+        //
+        //         // }
+        //     }
+        // } else if (ballRightOfPaddle()) {
+        //     // paddle is to the left of the ball
+        //     if (paddleGoingLeft()) {
+        //         // going the wrong way
+        //         paddle.currentVelocity = paddle.currentVelocity + paddleDeceleration
+        //         if (paddle.currentVelocity > ballXDistance) {
+        //             paddle.currentVelocity = ballXDistance;
+        //         }
+        //         paddle.x = paddle.x + paddle.currentVelocity;
+        //
+        //     } else if (paddle.currentVelocity < maxPaddleSpeed) {
+        //         // need to check is the new velocity is going to put the paddle too far past the ball
+        //         // used in cases of a very high acceleration
+        //         let acceleration = paddleAcceleration;
+        //         paddle.currentVelocity = paddle.currentVelocity + paddleAcceleration;
+        //         if (paddle.currentVelocity > maxPaddleSpeed) {
+        //             paddle.currentVelocity = maxPaddleSpeed
+        //         }
+        //         //don't accelerate much past the speed of the ball
+        //         if(paddle.currentVelocity > ballDistanceLeft() + ballXDistance) {
+        //             paddle.currentVelocity = ballDistanceLeft() + ballXDistance;
+        //         }
+        //         paddle.x = paddle.x + paddle.currentVelocity;
+        //
+        //     }
+        //
+        // }
 
         // let distance = Math.abs(destination - paddle.x);
         // let direction = 1;
@@ -311,9 +341,9 @@ const releaseBall = () => {
     if (ballOnPaddle)
     {
         ballOnPaddle = false;
-        randomAngle = getRandomInt(-135,-105);
+        // randomAngle = getRandomInt(-135,-105);
         // if(getRandomInt(0,1) === 1) {
-        //     randomAngle = getRandomInt(-15,-45)
+            randomAngle = getRandomInt(-15,-45);
         // }
         game.physics.arcade.velocityFromAngle(randomAngle, ballVelocity, ball.body.velocity);
         ball.animations.play('spin');
