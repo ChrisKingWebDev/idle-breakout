@@ -25,8 +25,9 @@ var ballOnPaddle = true;
 
 var score = 0;
 
-var ballInitialVelocity = 500;
+var ballInitialVelocity = 250;
 var ballVelocity = ballInitialVelocity;
+var ballMaxVelocity = 500;
 
 //medium ball and paddle
 var ballRebound = 1.001;
@@ -58,23 +59,25 @@ var resetBricks = false;
 
 const preload = () => {
     game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
-    game.stage.backgroundColor = '#eee';
+    game.stage.backgroundColor = '#f9f9f9';
+    game.state.disableVisibilityChange = true;
 
-     game.load.atlas('breakout', 'img/breakout.png', 'img/breakout.json');
-
+    game.load.atlas('breakout', 'img/breakout.png', 'img/breakout.json');
 }
 const create = () => {
+
     game.physics.startSystem(Phaser.Physics.ARCADE);
     game.physics.arcade.checkCollision.down = false;
 
     bricks = game.add.group();
     bricks.enableBody = true;
     bricks.physicsBodyType = Phaser.Physics.ARCADE;
+    bricks.y = brickStartHeight;
 
     var brick;
     brickSet.forEach((row, y) => {
         row.forEach((space, x) => {
-            brick = bricks.create(120 + (x * 36), brickStartHeight - (y * brickHeight), 'breakout', `brick_${space}_1.png`);
+            brick = bricks.create(120 + (x * 36), (y * brickHeight * -1), 'breakout', `brick_${space}_1.png`);
             brick.level = space;
             brick.body.bounce.set(1);
             brick.body.immovable = true;
@@ -106,21 +109,39 @@ const create = () => {
     game.physics.enable(ball, Phaser.Physics.ARCADE);
     ball.body.collideWorldBounds = true;
     ball.body.bounce.set(1);
-    // ball.body.maxVelocity.x = 1000;
-    // ball.body.maxVelocity.y = 1000;
     ball.velX = () => {
-         return ball.x - ball.lastX;
-     };
-     ball.needsRotation = false;
-     ball.needsVelocity = false;
+        return ball.x - ball.lastX;
+    };
+    ball.needsRotation = false;
+    ball.needsVelocity = false;
 
     ball.animations.add('spin', [ 'ball_1.png', 'ball_2.png', 'ball_3.png', 'ball_4.png', 'ball_5.png' ], 50, true, false);
 
     ball.events.onOutOfBounds.add(ballLost, this);
 
-    scoreText = game.add.text(32, 550, 'score: 0', { font: "20px Arial", fill: "#ffffff", align: "left" });
+    scoreText = game.add.text(32, 525, 'score: 0', { font: "20px Arial", fill: "#ffffff", stroke:"#000", strokeThickness: 5, align: "left" });
     introText = game.add.text(game.world.centerX, 400, '- click to start -', { font: "40px Arial", fill: "#ffffff", align: "center" });
     introText.anchor.setTo(0.5, 0.5);
+
+    var buttonStyle = {
+        font: "normal 18px Arial",
+        fill: '#fff',
+        align: 'center',
+        boundsAlignH: "center", // bounds center align horizontally
+        boundsAlignV: "middle" // bounds center align vertically
+    };
+
+    // Create a label to use as a button
+    // var ballText = new Phaser.Text(game, 0, 0, "Ball", buttonStyle);
+    ballButton = game.add.sprite(32, 550, 'breakout', 'brick_1_3.png');
+    ballButton.scale.y = 2;
+    ballButton.scale.x = 3;
+    ballButton.inputEnabled = true;
+    ballButton.events.onInputUp.add(() => {
+        showBallMenu();
+    });
+    var ballText = game.add.text(32, 550, 'Ball', buttonStyle);
+    ballText.setTextBounds(0, 0, ballButton.width, ballButton.height);
 
     game.input.onDown.add(releaseBall, this);
 }
@@ -400,8 +421,11 @@ const update = () => {
 
     ball.lastX = ball.x;
 
-    if (ball.needsVelocity) {
+    if (ball.needsVelocity && ballVelocity < ballMaxVelocity) {
         ballVelocity = ballVelocity * ballRebound;
+        if (ballVelocity > ballMaxVelocity) {
+            ballVelocity = ballMaxVelocity;
+        }
 
         game.physics.arcade.velocityFromRotation(ball.body.angle, ballVelocity, ball.body.velocity);
         ball.needsVelocity = false;
@@ -417,21 +441,14 @@ const update = () => {
         ball.needsRotation = false;
     }
 
-    if (resetBricks) {
-        // bricks.children.forEach((brick) => {
-        //     brick.y = brick.destinationY;
-        // });
-        // resetBricks = false;
-    } else {
-        bricks.children.forEach((brick) => {
-            if (brick.y < brick.destinationY) {
-                brick.y += 5;
-                if (brick.y > brick.destinationY) {
-                    brick.y = brick.destinationY;
-                }
+    bricks.children.forEach((brick) => {
+        if (brick.y < brick.destinationY) {
+            brick.y += 5;
+            if (brick.y > brick.destinationY) {
+                brick.y = brick.destinationY;
             }
-        });
-    }
+        }
+    });
 
     if (ballOnPaddle)
     {
@@ -446,25 +463,22 @@ const update = () => {
 }
 
 const ballLost = () => {
-
+    ballVelocity = ballInitialVelocity;
     resetLevel();
-
 }
 
 const releaseBall = () => {
-
     if (ballOnPaddle)
     {
         ballOnPaddle = false;
-        // randomAngle = getRandomInt(-135,-105);
-        // if(getRandomInt(0,1) === 1) {
+        randomAngle = getRandomInt(-135,-105);
+        if(getRandomInt(0,1) === 1) {
             randomAngle = getRandomInt(-15,-45);
-        // }
+        }
         game.physics.arcade.velocityFromAngle(randomAngle, ballVelocity, ball.body.velocity);
         ball.animations.play('spin');
         introText.visible = false;
     }
-
 }
 
 const brickClick = (_brick) => {
@@ -472,11 +486,8 @@ const brickClick = (_brick) => {
 }
 
 const ballHitBrick = (_ball, _brick) => {
-
     _ball.needsVelocity = true;
-
     brickKilled(_brick);
-
 }
 
 const brickKilled = (_brick) => {
@@ -537,7 +548,6 @@ const resetLevel = () => {
     ball.x = game.world.centerX
     ball.y =  paddle.y - 16;
 
-    ballVelocity = ballInitialVelocity;
     randomAngle = getRandomInt(-135,-105);
     if(getRandomInt(0,1) === 1) {
         randomAngle = getRandomInt(-15,-45)
@@ -550,7 +560,7 @@ const resetLevel = () => {
     liveBricks = [];
     bricks.children.forEach((brick) => {
         brick.indexY = brick.originalY;
-        brick.y = brickStartHeight - (brick.indexY * brickHeight);
+        brick.y = brick.indexY * brickHeight * -1;
         brick.destinationY = brick.y;
         liveBricks[brick.indexY] = liveBricks[brick.indexY] || [];
         liveBricks[brick.indexY][brick.indexX] = brick;
