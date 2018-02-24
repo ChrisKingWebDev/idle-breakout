@@ -1,6 +1,7 @@
 require('pixi.js');
 require('p2');
 require('phaser');
+import {buttons, menus, buttonStyle, buttonOverStyle} from "./buttons";
 
 var ball;
 var paddle;
@@ -119,31 +120,55 @@ const create = () => {
 
     ball.events.onOutOfBounds.add(ballLost, this);
 
-    scoreText = game.add.text(32, 525, 'score: 0', { font: "20px Arial", fill: "#ffffff", stroke:"#000", strokeThickness: 5, align: "left" });
+    scoreText = game.add.text(32, 500, 'score: 0', { font: "20px Arial", fill: "#ffffff", stroke:"#000", strokeThickness: 5, align: "left" });
     introText = game.add.text(game.world.centerX, 400, '- click to start -', { font: "40px Arial", fill: "#ffffff", align: "center" });
     introText.anchor.setTo(0.5, 0.5);
 
-    var buttonStyle = {
-        font: "normal 18px Arial",
-        fill: '#fff',
-        align: 'center',
-        boundsAlignH: "center", // bounds center align horizontally
-        boundsAlignV: "middle" // bounds center align vertically
-    };
 
+    menuGroup = game.add.group();
     // Create a label to use as a button
-    // var ballText = new Phaser.Text(game, 0, 0, "Ball", buttonStyle);
-    ballButton = game.add.sprite(32, 550, 'breakout', 'brick_1_3.png');
-    ballButton.scale.y = 2;
-    ballButton.scale.x = 3;
-    ballButton.inputEnabled = true;
-    ballButton.events.onInputUp.add(() => {
-        showBallMenu();
-    });
-    var ballText = game.add.text(32, 550, 'Ball', buttonStyle);
-    ballText.setTextBounds(0, 0, ballButton.width, ballButton.height);
+    buttons.forEach((button, i) => {
+        let buttonText = game.add.text(32 + (i * 100), 525, button.text, buttonStyle);
+        // buttonText.anchor.set(0.5);
+        buttonText.inputEnabled = true;
+        buttonText.events.onInputOver.add(buttonOver.bind(buttonText));
+        buttonText.events.onInputOut.add(buttonOut.bind(buttonText));
+        buttonText.events.onInputUp.add(() => {
+            toggleMenu(button.name);
+        }, this);
+    })
 
     game.input.onDown.add(releaseBall, this);
+}
+
+const buttonOver = (buttonText) => {
+    buttonText.setStyle(buttonOverStyle)
+}
+const buttonOut = (buttonText) => {
+    buttonText.setStyle(buttonStyle)
+}
+
+var currentMenu = "";
+var menuGroup;
+const toggleMenu = (menuName) => {
+    if (currentMenu === menuName) {
+        // kill existing menu
+        currentMenu = "";
+        menuGroup.removeAll()
+    } else {
+        menus[menuName].forEach((button, i) => {
+            let buttonText = game.add.text(32 + (i * 120), 550, `${button.text}<br/>${button.cost}`, buttonStyle);
+            // buttonText.anchor.set(0.5);
+            buttonText.inputEnabled = true;
+            buttonText.events.onInputOver.add(buttonOver.bind(buttonText));
+            buttonText.events.onInputOut.add(buttonOut.bind(buttonText));
+            buttonText.events.onInputUp.add(() => {
+                toggleMenu(button.name);
+            }, this);
+            menuGroup.addChild(buttonText);
+        });
+        currentMenu = menuName;
+    }
 }
 
 const paddleUnderBall = () => {
@@ -471,7 +496,7 @@ const releaseBall = () => {
     if (ballOnPaddle)
     {
         ballOnPaddle = false;
-        randomAngle = getRandomInt(-135,-105);
+        let randomAngle = getRandomInt(-135,-105);
         if(getRandomInt(0,1) === 1) {
             randomAngle = getRandomInt(-15,-45);
         }

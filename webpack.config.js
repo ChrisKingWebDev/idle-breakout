@@ -17,7 +17,8 @@ module.exports = {
         loaders: [
             { test: /pixi.js/, loader: "script-loader" },
             { test: /phaser-split\.js$/, loader: "script-loader" },
-            { test: /p2.js/, loader: "script-loader" }
+            { test: /p2.js/, loader: "script-loader" },
+            { test: /\.js$/, loader: 'babel-loader', exclude: /node_modules/ }
         ]
     },
     resolve: {
