@@ -1,70 +1,81 @@
-require('pixi.js');
-require('p2');
-require('phaser');
-import {buttons, menus, buttonStyle, buttonOverStyle} from "./buttons";
+require("pixi.js");
+require("p2");
+require("phaser");
+import {buttons, upgrades, buttonStyles} from "./buttons";
 
-var ball;
-var paddle;
-var bricks;
+let ball;
+let paddle;
+let bricks;
 const getInitialBrickSet = () => {
     let brickSet =  [];
-    for (var y = 0; y < 6; y++)
-    {
+    for (let y = 0; y < 6; y++) {
         let row = [];
-        for (var x = 0; x < 15; x++)
-        {
+        for (let x = 0; x < 15; x++) {
             row.push(1);
         }
         brickSet.push(row);
     }
     return brickSet;
-}
-var brickSet = getInitialBrickSet();
-var liveBricks = [];
+};
 
-var ballOnPaddle = true;
+let brickSet = getInitialBrickSet();
+let liveBricks = [];
 
-var score = 0;
+let ballOnPaddle = true;
 
-var ballInitialVelocity = 250;
-var ballVelocity = ballInitialVelocity;
-var ballMaxVelocity = 500;
+// let score = 0;
 
-//medium ball and paddle
-var ballRebound = 1.001;
-var maxPaddleSpeed = 10;
-var paddleAcceleration = 1;
-var paddleDeceleration = 5;
+global.vars = {
+    score: 0,
+    ballInitialVelocity: 200,
+    ballVelocity: 0,
+    ballMaxVelocity: 500
+};
 
-//medium ball and paddle
-// var ballRebound = 1.001;
-// var maxPaddleSpeed = 300;
-// var paddleAcceleration = 40;
-// var paddleDeceleration = 100;
+// let globalVars.ballInitialVelocity = 250;
+// let globalVars.ballVelocity = globalVars.ballInitialVelocity;
+// let ballMaxVelocity = 500;
+
+// medium ball and paddle
+let ballRebound = 1.001;
+let maxPaddleSpeed = 4;
+let paddleAcceleration = 0.1;
+let paddleDeceleration = 5;
+
+// medium ball and paddle
+// let ballRebound = 1.001;
+// let maxPaddleSpeed = 300;
+// let paddleAcceleration = 40;
+// let paddleDeceleration = 100;
 
 // very fast ball and ball
-// var ballRebound = 1.05;
-// var maxPaddleSpeed = 30000;
-// var paddleAcceleration = 5000;
-// var paddleDeceleration = 5000;
+// let ballRebound = 1.05;
+// let maxPaddleSpeed = 30000;
+// let paddleAcceleration = 5000;
+// let paddleDeceleration = 5000;
 
-var scoreText;
-var introText;
+let scoreText, speedText;
+let introText;
 
-var brickTimer;
-var brickDelay = 5;
-var brickHeight = 52;
-var brickDropHeight = 10;
-var brickStartHeight = 100;
-var resetBricks = false;
+global.updateLabels = () => {
+    scoreText.text = "Score: " + global.vars.score;
+    speedText.text = `Speed: ${parseFloat(global.vars.ballVelocity.toFixed(2))}/${global.vars.ballMaxVelocity}`;
+    renderButtonStyles();
+};
+
+let brickDelay = 5;
+let brickHeight = 52;
+let brickDropHeight = 10;
+let brickStartHeight = 100;
 
 const preload = () => {
     game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
-    game.stage.backgroundColor = '#f9f9f9';
+    game.stage.backgroundColor = "#f9f9f9";
     game.state.disableVisibilityChange = true;
 
-    game.load.atlas('breakout', 'img/breakout.png', 'img/breakout.json');
-}
+    game.load.atlas("breakout", "img/breakout.png", "img/breakout.json");
+};
+
 const create = () => {
 
     game.physics.startSystem(Phaser.Physics.ARCADE);
@@ -75,10 +86,10 @@ const create = () => {
     bricks.physicsBodyType = Phaser.Physics.ARCADE;
     bricks.y = brickStartHeight;
 
-    var brick;
+    let brick;
     brickSet.forEach((row, y) => {
         row.forEach((space, x) => {
-            brick = bricks.create(120 + (x * 36), (y * brickHeight * -1), 'breakout', `brick_${space}_1.png`);
+            brick = bricks.create(120 + (x * 36), (y * brickHeight * -1), "breakout", `brick_${space}_1.png`);
             brick.level = space;
             brick.body.bounce.set(1);
             brick.body.immovable = true;
@@ -89,11 +100,12 @@ const create = () => {
             liveBricks[y][x] = brick;
             brick.inputEnabled = true;
             brick.events.onInputDown.add(brickClick, this);
-        })
+        });
     });
-    brickTimer = game.time.events.loop(Phaser.Timer.SECOND * brickDelay, dropBricks, this);
 
-    paddle = game.add.sprite(game.world.centerX, 500, 'breakout', 'paddle_big.png');
+    game.time.events.loop(Phaser.Timer.SECOND * brickDelay, dropBricks, this);
+
+    paddle = game.add.sprite(game.world.centerX, 500, "breakout", "paddle_big.png");
     paddle.anchor.setTo(0.5, 0.5);
     // paddle.scale.x = 3;
     // paddle.scale.y = 8;
@@ -104,7 +116,7 @@ const create = () => {
     paddle.body.immovable = true;
     paddle.currentVelocity = 0;
 
-    ball = game.add.sprite(game.world.centerX, paddle.y - 16, 'breakout', 'ball_1.png');
+    ball = game.add.sprite(game.world.centerX, paddle.y - 16, "breakout", "ball_1.png");
     ball.anchor.set(0.5);
     ball.checkWorldBounds = true;
     game.physics.enable(ball, Phaser.Physics.ARCADE);
@@ -116,19 +128,21 @@ const create = () => {
     ball.needsRotation = false;
     ball.needsVelocity = false;
 
-    ball.animations.add('spin', [ 'ball_1.png', 'ball_2.png', 'ball_3.png', 'ball_4.png', 'ball_5.png' ], 50, true, false);
+    ball.animations.add("spin", [ "ball_1.png", "ball_2.png", "ball_3.png", "ball_4.png", "ball_5.png" ], 50, true, false);
 
     ball.events.onOutOfBounds.add(ballLost, this);
 
-    scoreText = game.add.text(32, 500, 'score: 0', { font: "20px Arial", fill: "#ffffff", stroke:"#000", strokeThickness: 5, align: "left" });
-    introText = game.add.text(game.world.centerX, 400, '- click to start -', { font: "40px Arial", fill: "#ffffff", align: "center" });
+    scoreText = game.add.text(32, 500, "Score: 0", { font: "20px Arial", fill: "#ffffff", stroke:"#000", strokeThickness: 5, align: "left" });
+    speedText = game.add.text(game.world.width - 32, 500, `Speed: 0/${global.vars.ballMaxVelocity}`, { font: "20px Arial", fill: "#ffffff", stroke:"#000", strokeThickness: 5, align: "left" });
+    speedText.anchor.x = 1;
+    introText = game.add.text(game.world.centerX, 400, "- click to start -", { font: "40px Arial", fill: "#ffffff", align: "center" });
     introText.anchor.setTo(0.5, 0.5);
 
 
     menuGroup = game.add.group();
     // Create a label to use as a button
     buttons.forEach((button, i) => {
-        let buttonText = game.add.text(32 + (i * 100), 525, button.text, buttonStyle);
+        let buttonText = game.add.text(32 + (i * 100), 525, button.text, buttonStyles.normal);
         // buttonText.anchor.set(0.5);
         buttonText.inputEnabled = true;
         buttonText.events.onInputOver.add(buttonOver.bind(buttonText));
@@ -136,79 +150,101 @@ const create = () => {
         buttonText.events.onInputUp.add(() => {
             toggleMenu(button.name);
         }, this);
-    })
+    });
 
     game.input.onDown.add(releaseBall, this);
-}
+};
 
-const buttonOver = (buttonText) => {
-    buttonText.setStyle(buttonOverStyle)
-}
-const buttonOut = (buttonText) => {
-    buttonText.setStyle(buttonStyle)
-}
+const buttonOver = (button) => {
+    if (button.upgrade && !button.upgrade.enabled) {
+        button.setStyle(buttonStyles.disabled);
+    } else {
+        button.setStyle(buttonStyles.hover);
+    }
+};
+const buttonOut = (button) => {
+    if (button.upgrade && !button.upgrade.enabled) {
+        button.setStyle(buttonStyles.disabled);
+    } else {
+        button.setStyle(buttonStyles.normal);
+    }
+};
 
-var currentMenu = "";
-var menuGroup;
+let currentMenu = "";
+let menuGroup;
 const toggleMenu = (menuName) => {
-    menuGroup.removeAll()
+    menuGroup.removeAll();
     if (currentMenu === menuName) {
         // kill existing menu
         currentMenu = "";
     } else {
-        menus[menuName].forEach((button, i) => {
-            let buttonText = game.add.text(32 + (i * 120), 550, `${button.text}\n${button.cost}`, buttonStyle);
-            buttonText.lineSpacing = -10;
+        upgrades[menuName].forEach((upgrade, i) => {
+
+            let button = game.add.text(32 + (i * 120), 550, `${upgrade.text}\n${upgrade.data.cost}`, buttonStyles.normal);
+            button.lineSpacing = -10;
             // buttonText.anchor.set(0.5);
-            buttonText.inputEnabled = true;
-            buttonText.events.onInputOver.add(buttonOver.bind(buttonText));
-            buttonText.events.onInputOut.add(buttonOut.bind(buttonText));
-            buttonText.events.onInputUp.add(() => {
-                toggleMenu(button.name);
+            button.inputEnabled = true;
+            button.events.onInputOver.add(buttonOver.bind(button));
+            button.events.onInputOut.add(buttonOut.bind(button));
+            button.events.onInputUp.add(() => {
+                upgrade.onClick();
+                button.text = `${upgrade.text}\n${upgrade.data.cost}`;
             }, this);
-            menuGroup.addChild(buttonText);
+            button.upgrade = upgrade;
+            menuGroup.addChild(button);
         });
+        renderButtonStyles();
         currentMenu = menuName;
     }
-}
+};
 
-const paddleUnderBall = () => {
-    return ball.x >= paddle.left && ball.x <= paddle.right
-}
+const renderButtonStyles = () => {
+    menuGroup.children.forEach((button) => {
+        if (button.upgrade.enabled) {
+            button.setStyle(buttonStyles.normal);
+        } else {
+            button.setStyle(buttonStyles.disabled);
+        }
+    });
+};
 
-const ballLeftOfPaddle = () => {
-    return ball.x < paddle.left
-}
-
-const ballRightOfPaddle = () => {
-    return ball.x > paddle.right
-}
-
-const paddleGoingLeft = () => {
-    return paddle.currentVelocity < 0;
-}
-
-const paddleGoingRight = () => {
-    return paddle.currentVelocity > 0;
-}
+// const paddleUnderBall = () => {
+//     return ball.x >= paddle.left && ball.x <= paddle.right
+// }
+//
+// const ballLeftOfPaddle = () => {
+//     return ball.x < paddle.left
+// }
+//
+// const ballRightOfPaddle = () => {
+//     return ball.x > paddle.right
+// }
+//
+// const paddleGoingLeft = () => {
+//     return paddle.currentVelocity < 0;
+// }
+//
+// const paddleGoingRight = () => {
+//     return paddle.currentVelocity > 0;
+// }
 
 const ballGoingLeft = () => {
     return ball.body.velocity.x < 0;
-}
+};
 
 const ballGoingRight = () => {
     return ball.body.velocity.x > 0;
-}
+};
 
 const ballDistanceLeft = () => {
     // returning a negative number on purpose
     return ball.x - paddle.x + (paddle.width / 4);
-}
+};
 
 const ballDistanceRight = () => {
     // returning a negative number on purpose
     return ball.x - paddle.x - (paddle.width / 4);
-}
+};
 
 const paddleAccelerateRight = () => {
     paddle.currentVelocity = paddle.currentVelocity + paddleAcceleration;
@@ -216,51 +252,56 @@ const paddleAccelerateRight = () => {
         // going faster than it can
         paddle.currentVelocity = maxPaddleSpeed;
     }
-}
+    // let desiredDistance = ballDistanceRight() + ball.velX();
+    // if (paddle.currentVelocity > desiredDistance) {
+    //     // going faster than the paddle now
+    //     paddle.currentVelocity = desiredDistance;
+    // }
+};
 
 const paddleAccelerateLeft = () => {
     paddle.currentVelocity = paddle.currentVelocity - paddleAcceleration;
-    if (paddle.currentVelocity > (maxPaddleSpeed * -1)) {
+    if (paddle.currentVelocity < (maxPaddleSpeed * -1)) {
         // going faster than it can
         paddle.currentVelocity = maxPaddleSpeed * -1;
     }
-    let desiredDistance = ballDistanceRight() + ball.velX();
-    if (paddle.currentVelocity < desiredDistance) {
-        //going faster than the paddle now
-        paddle.currentVelocity = desiredDistance;
-    }
-}
+    // let desiredDistance = ballDistanceRight() + ball.velX();
+    // if (paddle.currentVelocity < desiredDistance) {
+    //     // going faster than the paddle now
+    //     paddle.currentVelocity = desiredDistance;
+    // }
+};
 
 const paddleDecelerateRight = () => {
     paddle.currentVelocity = paddle.currentVelocity - paddleDeceleration;
     if (paddle.currentVelocity < 0) {
         paddle.currentVelocity = 0;
     }
-}
+};
 
 const paddleDecelerateLeft = () => {
     paddle.currentVelocity = paddle.currentVelocity + paddleDeceleration;
     if (paddle.currentVelocity > 0) {
         paddle.currentVelocity = 0;
     }
-}
+};
 
 const dropBricks = () => {
     if (!ballOnPaddle) {
         bricks.y = bricks.y + brickDropHeight;
     }
-}
+};
 
 const update = () => {
     if (!ballOnPaddle) {
 
         if (ballGoingRight()) {
-            //paddle is to the left of the ball, go faster
+            // paddle is to the left of the ball, go faster
             if (ballDistanceRight() > 0) {
                 paddleAccelerateRight();
                 let desiredDistance = ballDistanceRight() + ball.velX();
                 if (paddle.currentVelocity > desiredDistance) {
-                    //going faster than the paddle now
+                    // going faster than the paddle now
                     paddle.currentVelocity = desiredDistance;
                 }
             } else if (ballDistanceLeft() < 0) {
@@ -271,30 +312,28 @@ const update = () => {
                     // ball is to the right of the paddle, but heading back towards it
                     // the paddle should just wait?
                 }
-
-            }
-            else {
+            } else {
                 if (paddle.currentVelocity < ball.velX()) {
                     // paddle is right under the ball, but going too slow
-                    paddleAccelerateRight()
+                    paddleAccelerateRight();
                     if (paddle.currentVelocity > ball.velX()) {
-                        paddle.currentVelocity = ball.velX()
+                        paddle.currentVelocity = ball.velX();
                     }
-
                 } else if (paddle.currentVelocity > ball.velX()) {
                     // paddle is right under the ball, but going too fast
                     paddleDecelerateRight();
                     if (paddle.currentVelocity < ball.velX()) {
-                        paddle.currentVelocity = ball.velX()
+                        paddle.currentVelocity = ball.velX();
                     }
                 }
             }
-        } else if (ballGoingLeft()) {//paddle is to the left of the ball, go faster
+        } else if (ballGoingLeft()) {
+            // paddle is to the left of the ball, go faster
             if (ballDistanceLeft() < 0) {
                 paddleAccelerateLeft();
                 let desiredDistance = ballDistanceLeft() + ball.velX();
                 if (paddle.currentVelocity < desiredDistance) {
-                    //going faster than the paddle now
+                    // going faster than the paddle now
                     paddle.currentVelocity = desiredDistance;
                 }
             } else if (ballDistanceRight() > 0) {
@@ -305,165 +344,56 @@ const update = () => {
                     // wait?
                 }
 
-            }
-            else {
+            } else {
                 if (paddle.currentVelocity > ball.velX()) {
                     // paddle is right under the ball, but going too slow
-                    paddleAccelerateLeft()
+                    paddleAccelerateLeft();
                     if (paddle.currentVelocity < ball.velX()) {
-                        paddle.currentVelocity = ball.velX()
+                        paddle.currentVelocity = ball.velX();
                     }
 
                 } else if (paddle.currentVelocity < ball.velX()) {
                     // paddle is right under the ball, but going too fast
                     paddleDecelerateLeft();
                     if (paddle.currentVelocity > ball.velX()) {
-                        paddle.currentVelocity = ball.velX()
+                        paddle.currentVelocity = ball.velX();
                     }
                 }
             }
         }
         paddle.x = paddle.x + paddle.currentVelocity;
 
-        // if(ballGoingLeft()) {
-        //     paddle.x = ball.x + ballXDistance - 15;
-        // } else if (ballGoingRight()) {
-        //     paddle.x = ball.x + ballXDistance + 15;
-        // }
-        // let destination = ball.x;
-        // // if the ball is over the paddle, don't do anything, maybe add deceleration.
-        // if (paddleUnderBall()) {
-        //
-        //     if(ballGoingLeft() && paddle.velX() < ball.velX()) {
-        //         // paddle has caught up to the ball but is now going too fast
-        //         paddle.currentVelocity = paddle.currentVelocity + paddleDeceleration;
-        //         if (paddle.velX() > ball.velX()) {
-        //             paddle.currentVelocity = ball.velX()
-        //         }
-        //     } else if (ballGoingRight() && paddle.velX() > ball.velX()) {
-        //         // paddle has caught up to the ball but is now going too fast
-        //         paddle.currentVelocity = paddle.currentVelocity - paddleDeceleration;
-        //         if (paddle.velX() < ball.velX()) {
-        //             paddle.currentVelocity = ball.velX()
-        //         }
-        //     }
-        //     paddle.x = paddle.x + paddle.currentVelocity
-        // } else if (ballLeftOfPaddle()) {
-        //     // paddle is to the right of the ball
-        //     if (paddleGoingRight()) {
-        //         // going the wrong way
-        //         // if (paddle.body.velocity.x < paddleDeceleration) {
-        //         paddle.currentVelocity = paddle.currentVelocity - paddleDeceleration
-        //         if (paddle.currentVelocity < ballXDistance) {
-        //             paddle.currentVelocity = ballXDistance;
-        //         }
-        //         paddle.x = paddle.x + paddle.currentVelocity;
-        //         // } else {
-        //         //     paddle.body.velocity.x = 0;
-        //         // }
-        //     } else if (paddle.currentVelocity > (maxPaddleSpeed * -1)) {
-        //         // need to check is the new velocity is going to put the paddle too far past the ball
-        //         // used in cases of a very high acceleration
-        //         let acceleration = paddleAcceleration;
-        //         paddle.currentVelocity = paddle.currentVelocity - paddleAcceleration;
-        //         if (paddle.currentVelocity < maxPaddleSpeed * -1) {
-        //             paddle.currentVelocity = maxPaddleSpeed
-        //         }
-        //         //don't accelerate much past the speed of the ball
-        //         if(paddle.currentVelocity < ballDistanceLeft() + ballXDistance) {
-        //             paddle.currentVelocity = ballDistanceLeft() + ballXDistance;
-        //         }
-        //         paddle.x = paddle.x + paddle.currentVelocity;
-        //
-        //         // }
-        //     }
-        // } else if (ballRightOfPaddle()) {
-        //     // paddle is to the left of the ball
-        //     if (paddleGoingLeft()) {
-        //         // going the wrong way
-        //         paddle.currentVelocity = paddle.currentVelocity + paddleDeceleration
-        //         if (paddle.currentVelocity > ballXDistance) {
-        //             paddle.currentVelocity = ballXDistance;
-        //         }
-        //         paddle.x = paddle.x + paddle.currentVelocity;
-        //
-        //     } else if (paddle.currentVelocity < maxPaddleSpeed) {
-        //         // need to check is the new velocity is going to put the paddle too far past the ball
-        //         // used in cases of a very high acceleration
-        //         let acceleration = paddleAcceleration;
-        //         paddle.currentVelocity = paddle.currentVelocity + paddleAcceleration;
-        //         if (paddle.currentVelocity > maxPaddleSpeed) {
-        //             paddle.currentVelocity = maxPaddleSpeed
-        //         }
-        //         //don't accelerate much past the speed of the ball
-        //         if(paddle.currentVelocity > ballDistanceLeft() + ballXDistance) {
-        //             paddle.currentVelocity = ballDistanceLeft() + ballXDistance;
-        //         }
-        //         paddle.x = paddle.x + paddle.currentVelocity;
-        //
-        //     }
-        //
-        // }
-
-        // let distance = Math.abs(destination - paddle.x);
-        // let direction = 1;
-        // if (destination < paddle.x) {
-        //     direction = -1;
-        // }
-        // if (distance > maxPaddleSpeed) {
-        //     distance = maxPaddleSpeed;
-        // }
-        // paddle.x = paddle.x + (distance * direction);
-    // let destination = ball.x;
-    // if (destination >= paddle.left && destination <= paddle.right) {
-    // } else {
-    //     if (destination < paddle.left) {
-    //         destination += paddle.width / 2;
-    //     } else if (destination > paddle.right) {
-    //         destination -= paddle.width / 2;
-    //     }
-    //     if ((paddle.x < ball.x && paddle.body.velocity.x < 0) || (paddle.x > ball.x && paddle.body.velocity.x > 0)) {
-    //         game.physics.arcade.accelerateToXY(paddle, destination, paddle.y,2000,500,0);
-    //     } else {
-    //         game.physics.arcade.accelerateToXY(paddle, destination, paddle.y,500,500,0);
-    //     }
-    // }
-
     } else  {
         paddle.x = game.input.x;
     }
 
     // keep in bounds of the level
-    if (paddle.x < 24)
-    {
+    if (paddle.x < 24) {
         paddle.x = 24;
         paddle.body.velocity.x = 0;
-    }
-    else if (paddle.x > game.width - 24)
-    {
+    } else if (paddle.x > game.width - 24) {
         paddle.x = game.width - 24;
         paddle.body.velocity.x = 0;
     }
 
     ball.lastX = ball.x;
 
-    if (ball.needsVelocity && ballVelocity < ballMaxVelocity) {
-        ballVelocity = ballVelocity * ballRebound;
-        if (ballVelocity > ballMaxVelocity) {
-            ballVelocity = ballMaxVelocity;
+    if (ball.needsVelocity && global.vars.ballVelocity < global.vars.ballMaxVelocity) {
+        global.vars.ballVelocity = global.vars.ballVelocity * ballRebound;
+        if (global.vars.ballVelocity > global.vars.ballMaxVelocity) {
+            global.vars.ballVelocity = global.vars.ballMaxVelocity;
         }
-
-        game.physics.arcade.velocityFromRotation(ball.body.angle, ballVelocity, ball.body.velocity);
+        speedText.text = `Speed: ${parseFloat(global.vars.ballVelocity.toFixed(2))}/${global.vars.ballMaxVelocity}`;
+        game.physics.arcade.velocityFromRotation(ball.body.angle, global.vars.ballVelocity, ball.body.velocity);
         ball.needsVelocity = false;
     }
 
     if (ball.needsRotation !== false) {
-
-        var diff = ball.needsRotation
+        let diff = ball.needsRotation;
         if (Math.floor(Math.abs(diff)) < 3) {
             diff = getRandomInt(-20,20);
         }
-        game.physics.arcade.velocityFromRotation(ball.body.angle + (diff / 1000), ballVelocity, ball.body.velocity);
+        game.physics.arcade.velocityFromRotation(ball.body.angle + (diff / 1000), global.vars.ballVelocity, ball.body.velocity);
         ball.needsRotation = false;
     }
 
@@ -476,59 +406,57 @@ const update = () => {
         }
     });
 
-    if (ballOnPaddle)
-    {
+    if (ballOnPaddle) {
         ball.x = paddle.x;
         ball.lastX = paddle.x;
-    }
-    else
-    {
+    } else {
         game.physics.arcade.collide(ball, paddle, ballHitPaddle, null, this);
         game.physics.arcade.collide(ball, bricks, ballHitBrick, null, this);
     }
-}
+};
 
 const ballLost = () => {
-    ballVelocity = ballInitialVelocity;
+    global.vars.ballVelocity = global.vars.ballInitialVelocity;
     resetLevel();
-}
+};
 
 const releaseBall = () => {
-    if (ballOnPaddle)
-    {
+    if (ballOnPaddle) {
         ballOnPaddle = false;
-        let randomAngle = getRandomInt(-135,-105);
-        if(getRandomInt(0,1) === 1) {
-            randomAngle = getRandomInt(-15,-45);
+        let randomAngle = getRandomInt(-135,-115);
+        if (getRandomInt(0,1) === 1) {
+            randomAngle = getRandomInt(-15,-35);
         }
-        game.physics.arcade.velocityFromAngle(randomAngle, ballVelocity, ball.body.velocity);
-        ball.animations.play('spin');
+        global.vars.ballVelocity = global.vars.ballInitialVelocity;
+        game.physics.arcade.velocityFromAngle(randomAngle, global.vars.ballVelocity, ball.body.velocity);
+        ball.animations.play("spin");
         introText.visible = false;
+        speedText.text = `Speed: ${global.vars.ballVelocity}/${global.vars.ballMaxVelocity}`;
     }
-}
+};
 
 const brickClick = (_brick) => {
     brickKilled(_brick);
-}
+};
 
 const ballHitBrick = (_ball, _brick) => {
     _ball.needsVelocity = true;
     brickKilled(_brick);
-}
+};
 
 const brickKilled = (_brick) => {
     _brick.kill();
 
-    score += _brick.level * 1;
+    global.vars.score += _brick.level * 1;
 
-    scoreText.text = 'score: ' + score;
+    scoreText.text = "Score: " + global.vars.score;
+    renderButtonStyles();
 
     //  Are they any bricks left?
-    if (bricks.countLiving() == 0)
-    {
+    if (bricks.countLiving() === 0) {
         //  New level starts
-        score += 1000;
-        scoreText.text = 'score: ' + score;
+        global.vars.score += 1000;
+        scoreText.text = "Score: " + global.vars.score;
 
         resetLevel();
     }
@@ -538,7 +466,7 @@ const brickKilled = (_brick) => {
         if (y < _brick.indexY) {
             newBricks[y] = row;
         } else if (y === _brick.indexY) {
-            let liveCells = row.filter((brick, x) => {
+            let liveCells = row.filter((brick) => {
                 return brick.alive === true;
             });
             if (liveCells.length === 0) {
@@ -548,7 +476,7 @@ const brickKilled = (_brick) => {
             newBricks[y - 1] = row;
             newBricks[y - 1].forEach((brick, x) => {
                 brick.indexY--;
-                if(_brick.indexY > 0) {
+                if (_brick.indexY > 0) {
                     brick.destinationY = brick.y + brickHeight;
                 }
                 newBricks[y - 1][x] = brick;
@@ -558,30 +486,31 @@ const brickKilled = (_brick) => {
     if (deadRow) {
         liveBricks = newBricks;
     }
-}
+};
 
 const ballHitPaddle = (_ball, _paddle) => {
-
-    var diff = _ball.x - _paddle.x;
+    let diff = _ball.x - _paddle.x;
     ball.needsRotation = diff;
-}
+};
 
 const resetLevel = () => {
-    paddle.x = game.world.centerX
-    paddle.y = 500
+    paddle.x = game.world.centerX;
+    paddle.y = 500;
     paddle.body.velocity.x = 0;
 
-    ball.x = game.world.centerX
+    ball.x = game.world.centerX;
     ball.y =  paddle.y - 16;
 
-    randomAngle = getRandomInt(-135,-105);
-    if(getRandomInt(0,1) === 1) {
-        randomAngle = getRandomInt(-15,-45)
+    speedText.text = `Speed: 0/${global.vars.ballMaxVelocity}`;
+
+    let randomAngle = getRandomInt(-135,-115);
+    if (getRandomInt(0,1) === 1) {
+        randomAngle = getRandomInt(-15,-35);
     }
-    game.physics.arcade.velocityFromAngle(randomAngle, ballVelocity, ball.body.velocity);
+    game.physics.arcade.velocityFromAngle(randomAngle, global.vars.ballVelocity, ball.body.velocity);
 
     //  And bring the bricks back from the dead :)
-    bricks.callAll('revive');
+    bricks.callAll("revive");
     bricks.y = brickStartHeight;
     liveBricks = [];
     bricks.children.forEach((brick) => {
@@ -591,19 +520,17 @@ const resetLevel = () => {
         liveBricks[brick.indexY] = liveBricks[brick.indexY] || [];
         liveBricks[brick.indexY][brick.indexX] = brick;
     });
-    resetBricks = true;
-
-}
+};
 
 const getRandomInt = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+};
 
 const render = () => {
     // game.debug.body(ball);
     // game.debug.body(paddle);
-}
+};
 
-var game = new Phaser.Game(800, 600, Phaser.ScaleManager.SHOW_ALL, 'game-container', {
-  preload: preload, create: create, update: update, render: render
+let game = new Phaser.Game(800, 600, Phaser.ScaleManager.SHOW_ALL, "game-container", {
+    preload, create, update, render
 });
