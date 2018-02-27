@@ -59,12 +59,12 @@ const menus = {
         },
         {
             name: "paddleAcceleration",
-            text: "Faster Paddle Acceleration",
+            text: "Acceleration",
             cost: 50
         },
         {
             name: "paddleBrakes",
-            text: "Better Paddle Brakes",
+            text: "Brakes",
             cost: 500
         }
     ]

@@ -151,13 +151,14 @@ const buttonOut = (buttonText) => {
 var currentMenu = "";
 var menuGroup;
 const toggleMenu = (menuName) => {
+    menuGroup.removeAll()
     if (currentMenu === menuName) {
         // kill existing menu
         currentMenu = "";
-        menuGroup.removeAll()
     } else {
         menus[menuName].forEach((button, i) => {
-            let buttonText = game.add.text(32 + (i * 120), 550, `${button.text}<br/>${button.cost}`, buttonStyle);
+            let buttonText = game.add.text(32 + (i * 120), 550, `${button.text}\n${button.cost}`, buttonStyle);
+            buttonText.lineSpacing = -10;
             // buttonText.anchor.set(0.5);
             buttonText.inputEnabled = true;
             buttonText.events.onInputOver.add(buttonOver.bind(buttonText));
