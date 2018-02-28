@@ -60,6 +60,22 @@ let upgradeData = {
     "ballDamage": {
         cost: 10000,
         level: 0
+    },
+    "paddleAcceleration": {
+        cost: 20,
+        level: 0
+    },
+    "paddleBrakes": {
+        cost: 50,
+        level: 0
+    },
+    "paddleTopSpeed": {
+        cost: 100,
+        level: 0
+    },
+    "paddleWider": {
+        cost: 500,
+        level: 0
     }
 };
 
@@ -73,6 +89,7 @@ class Upgrade {
 
                 // do the actions that will be the same across all functions
                 // global.vars.score -= this.data.cost;
+                this.data.level += 1;
 
                 clickFunction(this.data);
 
@@ -82,7 +99,7 @@ class Upgrade {
         this.enabledFunction = enabledFunction;
     }
     get enabled() {
-        return global.vars.score >= this.data.cost && (this.enabledFunction && this.enabledFunction());
+        return global.vars.score >= this.data.cost && (!this.enabledFunction || this.enabledFunction());
     }
 }
 
@@ -103,27 +120,32 @@ let upgrades = {
             global.vars.ballMaxVelocity += 50;
             data.cost = data.cost * 2;
         }),
-        new Upgrade("ballBounce","Bounce",() => {
+        new Upgrade("ballBounce","Bounce",(data) => {
+            if (global.vars.ballRebound === 1.001) {
+                global.vars.ballRebound = 1.005;
+            } else {
+                global.vars.ballRebound += 0.005;
+            }
+            data.cost = data.cost * 2;
         }),
         new Upgrade("ballDamage","Damage",() => {
         })
     ],
     paddle: [
-        {
-            name: "paddleWider",
-            text: "Wider Paddle",
-            cost: 20
-        },
-        {
-            name: "paddleAcceleration",
-            text: "Acceleration",
-            cost: 50
-        },
-        {
-            name: "paddleBrakes",
-            text: "Brakes",
-            cost: 500
-        }
+        new Upgrade("paddleAcceleration","Acceleration",(data) => {
+            if (global.vars.paddleAcceleration === 0.1) {
+                global.vars.paddleAcceleration = 0.5;
+            } else {
+                global.vars.paddleAcceleration += 0.5;
+            }
+            data.cost = data.cost * 2;
+        }),
+        new Upgrade("paddleBrakes","Brakes",() => {
+        }),
+        new Upgrade("paddleTopSpeed","Top Speed",() => {
+        }),
+        new Upgrade("paddleWider","Wider",() => {
+        }),
     ]
 };
 

@@ -29,7 +29,9 @@ global.vars = {
     score: 0,
     ballInitialVelocity: 200,
     ballVelocity: 0,
-    ballMaxVelocity: 500
+    ballMaxVelocity: 500,
+    paddleAcceleration: 0.1,
+    ballRebound: 1.001
 };
 
 // let globalVars.ballInitialVelocity = 250;
@@ -37,9 +39,9 @@ global.vars = {
 // let ballMaxVelocity = 500;
 
 // medium ball and paddle
-let ballRebound = 1.001;
+// let ballRebound = 1.001;
 let maxPaddleSpeed = 4;
-let paddleAcceleration = 0.1;
+// let paddleAcceleration = 0.1;
 let paddleDeceleration = 5;
 
 // medium ball and paddle
@@ -59,7 +61,7 @@ let introText;
 
 global.updateLabels = () => {
     scoreText.text = "Score: " + global.vars.score;
-    speedText.text = `Speed: ${parseFloat(global.vars.ballVelocity.toFixed(2))}/${global.vars.ballMaxVelocity}`;
+    speedText.text = `Speed: ${parseFloat(global.vars.ballVelocity.toFixed(2))}/${global.vars.ballMaxVelocity} @ ${global.vars.ballRebound.toFixed(3)}`;
     renderButtonStyles();
 };
 
@@ -247,7 +249,7 @@ const ballDistanceRight = () => {
 };
 
 const paddleAccelerateRight = () => {
-    paddle.currentVelocity = paddle.currentVelocity + paddleAcceleration;
+    paddle.currentVelocity = paddle.currentVelocity + global.vars.paddleAcceleration;
     if (paddle.currentVelocity > maxPaddleSpeed) {
         // going faster than it can
         paddle.currentVelocity = maxPaddleSpeed;
@@ -260,7 +262,7 @@ const paddleAccelerateRight = () => {
 };
 
 const paddleAccelerateLeft = () => {
-    paddle.currentVelocity = paddle.currentVelocity - paddleAcceleration;
+    paddle.currentVelocity = paddle.currentVelocity - global.vars.paddleAcceleration;
     if (paddle.currentVelocity < (maxPaddleSpeed * -1)) {
         // going faster than it can
         paddle.currentVelocity = maxPaddleSpeed * -1;
@@ -307,7 +309,7 @@ const update = () => {
             } else if (ballDistanceLeft() < 0) {
                 if (paddle.currentVelocity < 0) {
                     // paddle is going left, decelerate
-                    paddleDecelerateLeft();
+                    // paddleDecelerateLeft();
                 } else {
                     // ball is to the right of the paddle, but heading back towards it
                     // the paddle should just wait?
@@ -339,7 +341,7 @@ const update = () => {
             } else if (ballDistanceRight() > 0) {
                 if (paddle.currentVelocity > 0) {
                     // paddle is going left, decelerate
-                    paddleDecelerateRight();
+                    // paddleDecelerateRight();
                 } else {
                     // wait?
                 }
@@ -379,11 +381,11 @@ const update = () => {
     ball.lastX = ball.x;
 
     if (ball.needsVelocity && global.vars.ballVelocity < global.vars.ballMaxVelocity) {
-        global.vars.ballVelocity = global.vars.ballVelocity * ballRebound;
+        global.vars.ballVelocity = global.vars.ballVelocity * global.vars.ballRebound;
         if (global.vars.ballVelocity > global.vars.ballMaxVelocity) {
             global.vars.ballVelocity = global.vars.ballMaxVelocity;
         }
-        speedText.text = `Speed: ${parseFloat(global.vars.ballVelocity.toFixed(2))}/${global.vars.ballMaxVelocity}`;
+        speedText.text = `Speed: ${parseFloat(global.vars.ballVelocity.toFixed(2))}/${global.vars.ballMaxVelocity} @ ${global.vars.ballRebound.toFixed(3)}`;
         game.physics.arcade.velocityFromRotation(ball.body.angle, global.vars.ballVelocity, ball.body.velocity);
         ball.needsVelocity = false;
     }
@@ -431,7 +433,7 @@ const releaseBall = () => {
         game.physics.arcade.velocityFromAngle(randomAngle, global.vars.ballVelocity, ball.body.velocity);
         ball.animations.play("spin");
         introText.visible = false;
-        speedText.text = `Speed: ${global.vars.ballVelocity}/${global.vars.ballMaxVelocity}`;
+        speedText.text = `Speed: ${global.vars.ballVelocity}/${global.vars.ballMaxVelocity} @ ${global.vars.ballRebound}`;
     }
 };
 
@@ -501,7 +503,7 @@ const resetLevel = () => {
     ball.x = game.world.centerX;
     ball.y =  paddle.y - 16;
 
-    speedText.text = `Speed: 0/${global.vars.ballMaxVelocity}`;
+    speedText.text = `Speed: ${global.vars.ballVelocity}/${global.vars.ballMaxVelocity} @ ${global.vars.ballRebound.toFixed(3)}`;
 
     let randomAngle = getRandomInt(-135,-115);
     if (getRandomInt(0,1) === 1) {
