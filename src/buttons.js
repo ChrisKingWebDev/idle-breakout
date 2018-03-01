@@ -140,9 +140,13 @@ let upgrades = {
             }
             data.cost = data.cost * 2;
         }),
-        new Upgrade("paddleBrakes","Brakes",() => {
+        new Upgrade("paddleBrakes","Brakes",(data) => {
+            global.vars.paddleDeceleration += 0.5;
+            data.cost = data.cost * 2;
         }),
-        new Upgrade("paddleTopSpeed","Top Speed",() => {
+        new Upgrade("paddleTopSpeed","Top Speed",(data) => {
+            global.vars.maxPaddleSpeed += 2;
+            data.cost = data.cost * 2;
         }),
         new Upgrade("paddleWider","Wider",() => {
         }),

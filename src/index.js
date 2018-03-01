@@ -27,11 +27,13 @@ let ballOnPaddle = true;
 
 global.vars = {
     score: 0,
-    ballInitialVelocity: 200,
+    ballInitialVelocity: 150,
     ballVelocity: 0,
-    ballMaxVelocity: 500,
+    ballMaxVelocity: 300,
+    ballRebound: 1.01,
     paddleAcceleration: 0.1,
-    ballRebound: 1.001
+    paddleDeceleration: 0.05,
+    maxPaddleSpeed: 2
 };
 
 // let globalVars.ballInitialVelocity = 250;
@@ -40,9 +42,9 @@ global.vars = {
 
 // medium ball and paddle
 // let ballRebound = 1.001;
-let maxPaddleSpeed = 4;
+// let maxPaddleSpeed = 4;
 // let paddleAcceleration = 0.1;
-let paddleDeceleration = 5;
+// let paddleDeceleration = 5;
 
 // medium ball and paddle
 // let ballRebound = 1.001;
@@ -182,14 +184,17 @@ const toggleMenu = (menuName) => {
     } else {
         upgrades[menuName].forEach((upgrade, i) => {
 
-            let button = game.add.text(32 + (i * 120), 550, `${upgrade.text}\n${upgrade.data.cost}`, buttonStyles.normal);
+            let button = game.add.text(80 + (i * 120), 550, `${upgrade.text}\n${upgrade.data.cost}`, buttonStyles.normal);
             button.lineSpacing = -10;
-            // buttonText.anchor.set(0.5);
+            button.anchor.x = 0.5;
             button.inputEnabled = true;
             button.events.onInputOver.add(buttonOver.bind(button));
             button.events.onInputOut.add(buttonOut.bind(button));
             button.events.onInputUp.add(() => {
                 upgrade.onClick();
+                if (upgrade.name === "ballSpeed") {
+                    game.physics.arcade.velocityFromRotation(ball.body.angle, global.vars.ballVelocity, ball.body.velocity);
+                }
                 button.text = `${upgrade.text}\n${upgrade.data.cost}`;
             }, this);
             button.upgrade = upgrade;
@@ -250,9 +255,12 @@ const ballDistanceRight = () => {
 
 const paddleAccelerateRight = () => {
     paddle.currentVelocity = paddle.currentVelocity + global.vars.paddleAcceleration;
-    if (paddle.currentVelocity > maxPaddleSpeed) {
+    if (paddle.currentVelocity > global.vars.maxPaddleSpeed) {
         // going faster than it can
-        paddle.currentVelocity = maxPaddleSpeed;
+        paddle.currentVelocity = global.vars.maxPaddleSpeed;
+    }
+    if (paddle.currentVelocity < global.vars.maxPaddleSpeed) {
+        paddle.tint = 0x007a20;
     }
     // let desiredDistance = ballDistanceRight() + ball.velX();
     // if (paddle.currentVelocity > desiredDistance) {
@@ -263,9 +271,12 @@ const paddleAccelerateRight = () => {
 
 const paddleAccelerateLeft = () => {
     paddle.currentVelocity = paddle.currentVelocity - global.vars.paddleAcceleration;
-    if (paddle.currentVelocity < (maxPaddleSpeed * -1)) {
+    if (paddle.currentVelocity < (global.vars.maxPaddleSpeed * -1)) {
         // going faster than it can
-        paddle.currentVelocity = maxPaddleSpeed * -1;
+        paddle.currentVelocity = global.vars.maxPaddleSpeed * -1;
+    }
+    if (paddle.currentVelocity < (global.vars.maxPaddleSpeed * -1)) {
+        paddle.tint = 0x007a20;
     }
     // let desiredDistance = ballDistanceRight() + ball.velX();
     // if (paddle.currentVelocity < desiredDistance) {
@@ -275,16 +286,22 @@ const paddleAccelerateLeft = () => {
 };
 
 const paddleDecelerateRight = () => {
-    paddle.currentVelocity = paddle.currentVelocity - paddleDeceleration;
+    paddle.currentVelocity = paddle.currentVelocity - global.vars.paddleDeceleration;
     if (paddle.currentVelocity < 0) {
         paddle.currentVelocity = 0;
+    }
+    if (paddle.currentVelocity > 0) {
+        paddle.tint = 0xd12806;
     }
 };
 
 const paddleDecelerateLeft = () => {
-    paddle.currentVelocity = paddle.currentVelocity + paddleDeceleration;
+    paddle.currentVelocity = paddle.currentVelocity + global.vars.paddleDeceleration;
     if (paddle.currentVelocity > 0) {
         paddle.currentVelocity = 0;
+    }
+    if (paddle.currentVelocity < 0) {
+        paddle.tint = 0xd12806;
     }
 };
 
@@ -295,6 +312,7 @@ const dropBricks = () => {
 };
 
 const update = () => {
+    paddle.tint = 0xFFFFFF;
     if (!ballOnPaddle) {
 
         if (ballGoingRight()) {
