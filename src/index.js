@@ -253,11 +253,28 @@ const ballDistanceRight = () => {
     return ball.x - paddle.x - (paddle.width / 4);
 };
 
+const paddleGoMoreRight = () => {
+    if (paddle.currentVelocity < 0) {
+        paddleDecelerateLeft();
+    } else {
+        paddleAccelerateRight();
+    }
+};
+
+const paddleGoMoreLeft = () => {
+    if (paddle.currentVelocity > 0) {
+        paddleDecelerateRight();
+    } else {
+        paddleAccelerateLeft();
+    }
+};
+
 const paddleAccelerateRight = () => {
     paddle.currentVelocity = paddle.currentVelocity + global.vars.paddleAcceleration;
     if (paddle.currentVelocity > global.vars.maxPaddleSpeed) {
         // going faster than it can
         paddle.currentVelocity = global.vars.maxPaddleSpeed;
+        paddle.tint = 0xf2d415;
     }
     if (paddle.currentVelocity < global.vars.maxPaddleSpeed) {
         paddle.tint = 0x007a20;
@@ -274,8 +291,9 @@ const paddleAccelerateLeft = () => {
     if (paddle.currentVelocity < (global.vars.maxPaddleSpeed * -1)) {
         // going faster than it can
         paddle.currentVelocity = global.vars.maxPaddleSpeed * -1;
+        paddle.tint = 0xf2d415;
     }
-    if (paddle.currentVelocity < (global.vars.maxPaddleSpeed * -1)) {
+    if (paddle.currentVelocity > (global.vars.maxPaddleSpeed * -1)) {
         paddle.tint = 0x007a20;
     }
     // let desiredDistance = ballDistanceRight() + ball.velX();
@@ -308,6 +326,9 @@ const paddleDecelerateLeft = () => {
 const dropBricks = () => {
     if (!ballOnPaddle) {
         bricks.y = bricks.y + brickDropHeight;
+        if (bricks.y + liveBricks[0][0].y >= paddle.y - paddle.height) {
+            resetLevel();
+        }
     }
 };
 
@@ -318,11 +339,12 @@ const update = () => {
         if (ballGoingRight()) {
             // paddle is to the left of the ball, go faster
             if (ballDistanceRight() > 0) {
-                paddleAccelerateRight();
+                paddleGoMoreRight();
                 let desiredDistance = ballDistanceRight() + ball.velX();
                 if (paddle.currentVelocity > desiredDistance) {
                     // going faster than the paddle now
                     paddle.currentVelocity = desiredDistance;
+                    paddle.tint = 0xFFFFFF;
                 }
             } else if (ballDistanceLeft() < 0) {
                 if (paddle.currentVelocity < 0) {
@@ -335,26 +357,30 @@ const update = () => {
             } else {
                 if (paddle.currentVelocity < ball.velX()) {
                     // paddle is right under the ball, but going too slow
-                    paddleAccelerateRight();
+                    paddleGoMoreRight();
                     if (paddle.currentVelocity > ball.velX()) {
                         paddle.currentVelocity = ball.velX();
+                        paddle.tint = 0xFFFFFF;
                     }
                 } else if (paddle.currentVelocity > ball.velX()) {
                     // paddle is right under the ball, but going too fast
+
                     paddleDecelerateRight();
                     if (paddle.currentVelocity < ball.velX()) {
                         paddle.currentVelocity = ball.velX();
+                        paddle.tint = 0xFFFFFF;
                     }
                 }
             }
         } else if (ballGoingLeft()) {
             // paddle is to the left of the ball, go faster
             if (ballDistanceLeft() < 0) {
-                paddleAccelerateLeft();
+                paddleGoMoreLeft();
                 let desiredDistance = ballDistanceLeft() + ball.velX();
                 if (paddle.currentVelocity < desiredDistance) {
                     // going faster than the paddle now
                     paddle.currentVelocity = desiredDistance;
+                    paddle.tint = 0xFFFFFF;
                 }
             } else if (ballDistanceRight() > 0) {
                 if (paddle.currentVelocity > 0) {
@@ -367,9 +393,10 @@ const update = () => {
             } else {
                 if (paddle.currentVelocity > ball.velX()) {
                     // paddle is right under the ball, but going too slow
-                    paddleAccelerateLeft();
+                    paddleGoMoreLeft();
                     if (paddle.currentVelocity < ball.velX()) {
                         paddle.currentVelocity = ball.velX();
+                        paddle.tint = 0xFFFFFF;
                     }
 
                 } else if (paddle.currentVelocity < ball.velX()) {
@@ -377,6 +404,7 @@ const update = () => {
                     paddleDecelerateLeft();
                     if (paddle.currentVelocity > ball.velX()) {
                         paddle.currentVelocity = ball.velX();
+                        paddle.tint = 0xFFFFFF;
                     }
                 }
             }
@@ -390,10 +418,10 @@ const update = () => {
     // keep in bounds of the level
     if (paddle.x < 24) {
         paddle.x = 24;
-        paddle.body.velocity.x = 0;
+        paddle.currentVelocity = 0;
     } else if (paddle.x > game.width - 24) {
         paddle.x = game.width - 24;
-        paddle.body.velocity.x = 0;
+        paddle.currentVelocity = 0;
     }
 
     ball.lastX = ball.x;
@@ -516,7 +544,7 @@ const ballHitPaddle = (_ball, _paddle) => {
 const resetLevel = () => {
     paddle.x = game.world.centerX;
     paddle.y = 500;
-    paddle.body.velocity.x = 0;
+    paddle.currentVelocity = 0;
 
     ball.x = game.world.centerX;
     ball.y =  paddle.y - 16;
